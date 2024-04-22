@@ -20,6 +20,44 @@ function performInnerJoin(data, joinData, joinCondition, fields, table) {
     });
 }
 
+function createResultRow(
+    mainRow,
+    joinRow,
+    fields,
+    table,
+    includeAllMainFields
+) {
+    const resultRow = {};
+
+    if (includeAllMainFields) {
+        // Include all fields from the main table
+        Object.keys(mainRow || {}).forEach((key) => {
+            const prefixedKey = `${table}.${key}`;
+            resultRow[prefixedKey] = mainRow ? mainRow[key] : null;
+        });
+    }
+
+    // Now, add or overwrite with the fields specified in the query
+    fields.forEach((field) => {
+        const [tableName, fieldName] = field.includes(".")
+            ? field.split(".")
+            : [table, field];
+        resultRow[field] =
+            tableName === table && mainRow
+                ? mainRow[fieldName]
+                : joinRow
+                    ? joinRow[fieldName]
+                    : null;
+    });
+
+    return resultRow;
+}
+
+function getValueFromRow(row, compoundFieldName) {
+    const [tableName, fieldName] = compoundFieldName.split(".");
+    return row[`${tableName}.${fieldName}`] || row[fieldName];
+}
+
 function performLeftJoin(data, joinData, joinCondition, fields, table) {
     return data.flatMap((mainRow) => {
         const matchingJoinRows = joinData.filter((joinRow) => {
